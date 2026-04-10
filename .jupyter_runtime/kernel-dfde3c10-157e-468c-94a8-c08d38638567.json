@@ -1,0 +1,13 @@
+{
+  "shell_port": 60189,
+  "iopub_port": 60190,
+  "stdin_port": 60191,
+  "control_port": 60193,
+  "hb_port": 60192,
+  "ip": "127.0.0.1",
+  "key": "3a671b95-37085e851f2fc731035bca32",
+  "transport": "tcp",
+  "signature_scheme": "hmac-sha256",
+  "kernel_name": "python3",
+  "jupyter_session": "C:\\Users\\DELL\\OneDrive\\Desktop\\Stock Market Analysis\\notebooks\\03_eda_analysis.ipynb"
+}

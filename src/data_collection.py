@@ -77,34 +77,56 @@ class StockDataCollector:
     def _fetch_ticker(
         self, ticker: str, start: str, end: str, interval: str
     ) -> Optional[pd.DataFrame]:
-        try:
-            logger.info("Downloading %s (%s to %s) …", ticker, start, end)
-            
-            import requests
-            session = requests.Session()
-            session.headers.update({
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            })
-            
-            df = yf.download(
-                ticker,
-                start=start,
-                end=end,
-                interval=interval,
-                auto_adjust=True,
-                progress=False,
-                session=session
-            )
-            if df.empty:
-                logger.warning("No data returned for %s.", ticker)
-                return None
-            df.index.name = "Date"
-            df.columns = [c[0].lower() if isinstance(c, tuple) else c.lower() for c in df.columns]
-            df["ticker"] = ticker
-            return df
-        except Exception as exc:
-            logger.error("Error fetching %s: %s", ticker, exc)
-            return None
+        """
+        Fetch via yf.Ticker().history() — more reliable on cloud servers
+        than yf.download(). Falls back to yf.download() on failure.
+        """
+        import time
+
+        for attempt in range(3):
+            try:
+                logger.info("Downloading %s (%s to %s) attempt %d…", ticker, start, end, attempt + 1)
+
+                # ── Primary: Ticker.history (cloud-friendlier) ──────────────
+                t = yf.Ticker(ticker)
+                df = t.history(start=start, end=end, interval=interval, auto_adjust=True)
+
+                if df.empty:
+                    # ── Fallback: yf.download ────────────────────────────────
+                    logger.warning("Ticker.history empty for %s, trying yf.download…", ticker)
+                    df = yf.download(
+                        ticker,
+                        start=start,
+                        end=end,
+                        interval=interval,
+                        auto_adjust=True,
+                        progress=False,
+                    )
+
+                if df.empty:
+                    logger.warning("No data returned for %s on attempt %d.", ticker, attempt + 1)
+                    time.sleep(1.5)
+                    continue
+
+                df.index.name = "Date"
+                df.index = pd.to_datetime(df.index).tz_localize(None)
+                # Flatten MultiIndex columns if present
+                if isinstance(df.columns, pd.MultiIndex):
+                    df.columns = [c[0].lower() for c in df.columns]
+                else:
+                    df.columns = [c.lower() for c in df.columns]
+                # Drop irrelevant yfinance columns
+                df = df.drop(columns=[c for c in ["dividends", "stock splits", "capital gains"] if c in df.columns], errors="ignore")
+                df["ticker"] = ticker
+                logger.info("Fetched %d rows for %s.", len(df), ticker)
+                return df
+
+            except Exception as exc:
+                logger.error("Error fetching %s (attempt %d): %s", ticker, attempt + 1, exc)
+                time.sleep(1.5)
+
+        logger.error("All attempts failed for %s.", ticker)
+        return None
 
     @staticmethod
     def _save(ticker: str, df: pd.DataFrame) -> None:

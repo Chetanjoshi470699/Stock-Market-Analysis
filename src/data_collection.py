@@ -79,6 +79,13 @@ class StockDataCollector:
     ) -> Optional[pd.DataFrame]:
         try:
             logger.info("Downloading %s (%s to %s) …", ticker, start, end)
+            
+            import requests
+            session = requests.Session()
+            session.headers.update({
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            })
+            
             df = yf.download(
                 ticker,
                 start=start,
@@ -86,6 +93,7 @@ class StockDataCollector:
                 interval=interval,
                 auto_adjust=True,
                 progress=False,
+                session=session
             )
             if df.empty:
                 logger.warning("No data returned for %s.", ticker)

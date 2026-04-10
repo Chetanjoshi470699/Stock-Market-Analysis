@@ -418,7 +418,7 @@ if run_btn or "df_indicators" not in st.session_state or st.session_state.get("l
         run_model.clear()
 
     with st.spinner(f"Fetching and processing data for **{ticker}**…"):
-        raw_df, df = load_and_process(ticker, str(start_date))
+        raw_df, df = load_and_process(ticker, start_date.strftime("%Y-%m-%d"))
 
     if raw_df is None or df is None:
         st.error(f"❌ Could not fetch data for **{ticker}**. Please verify the ticker symbol and try again.")
@@ -428,7 +428,7 @@ if run_btn or "df_indicators" not in st.session_state or st.session_state.get("l
     st.session_state["last_ticker"] = ticker
 
     with st.spinner("Training Random Forest model…"):
-        ml_metrics, ml_preds = run_model(ticker, str(start_date), n_estimators, horizon)
+        ml_metrics, ml_preds = run_model(ticker, start_date.strftime("%Y-%m-%d"), n_estimators, horizon)
     st.session_state["ml_metrics"] = ml_metrics
     st.session_state["ml_preds"] = ml_preds
 
